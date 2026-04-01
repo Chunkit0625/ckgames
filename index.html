@@ -1,68 +1,122 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <style> body { margin: 0; background: #000; overflow: hidden; } </style>
 </head>
-<body style="margin: 0; background: #000; overflow: hidden;">
+<body>
 <script>
     const config = {
         type: Phaser.AUTO,
-        width: 375,
-        height: 667,
-        physics: { default: 'arcade' },
+        width: window.innerWidth,
+        height: window.innerHeight,
+        physics: { default: 'arcade', arcade: { debug: false } },
         scene: { preload: preload, create: create, update: update }
     };
 
-    let player;
-    let items;
+    let player, enemies, stars, scoreText;
     let score = 0;
-    let scoreText;
+    let gameActive = true;
 
-    new Phaser.Game(config);
+    const game = new Phaser.Game(config);
 
-    function preload() {}
+    function preload() {} // 纯代码生成素材，无需额外图片
 
     function create() {
-        // 玩家（底部的篮子/方块）
-        player = this.add.rectangle(187, 600, 80, 20, 0x00ff00);
+        // 1. 生成动态星空背景
+        stars = this.add.group();
+        for (let i = 0; i < 100; i++) {
+            let star = this.add.circle(Phaser.Math.Between(0, config.width), Phaser.Math.Between(0, config.height), 1, 0xffffff);
+            stars.add(star);
+        }
+
+        // 2. 创建玩家战机 (三角形)
+        player = this.add.triangle(config.width/2, config.height - 100, 0, 40, 20, 0, 40, 40, 0x00ffcc);
         this.physics.add.existing(player);
         player.body.setCollideWorldBounds(true);
 
-        items = this.physics.add.group();
+        // 3. 敌人组
+        enemies = this.physics.add.group();
 
-        // 计分
-        scoreText = this.add.text(16, 16, 'Gold: 0', { fontSize: '24px', fill: '#fff' });
+        // 4. UI 计分
+        scoreText = this.add.text(20, 40, 'SCORE: 0', { fontSize: '24px', fill: '#00ffcc', fontStyle: 'bold' });
 
-        // 鼠标/手指移动
+        // 5. 触屏/鼠标控制
         this.input.on('pointermove', (pointer) => {
-            player.x = pointer.x;
+            if (gameActive) {
+                this.tweens.add({
+                    targets: player,
+                    x: pointer.x,
+                    y: pointer.y - 50,
+                    duration: 100,
+                    ease: 'Power2'
+                });
+            }
         });
 
-        // 每秒掉落一个金币
+        // 6. 循环生成敌人
         this.time.addEvent({
-            delay: 1000,
-            callback: () => {
-                let x = Phaser.Math.Between(20, 355);
-                let item = this.add.circle(x, 0, 15, 0xffd700);
-                items.add(item);
-                this.physics.add.existing(item);
-                item.body.setVelocityY(250);
-            },
+            delay: 600,
+            callback: spawnEnemy,
+            callbackScope: this,
             loop: true
         });
 
-        // 碰撞检测
-        this.physics.add.overlap(player, items, (p, item) => {
-            item.destroy();
-            score += 10;
-            scoreText.setText('Gold: ' + score);
-        });
+        // 7. 碰撞逻辑
+        this.physics.add.overlap(player, enemies, gameOver, null, this);
+    }
+
+    function spawnEnemy() {
+        if (!gameActive) return;
+        let x = Phaser.Math.Between(30, config.width - 30);
+        let enemy = this.add.rectangle(x, -50, 30, 30, 0xff3366);
+        enemies.add(enemy);
+        this.physics.add.existing(enemy);
+        enemy.body.setVelocityY(300 + (score * 2)); // 随分数提速
+        enemy.setRotation(Phaser.Math.Between(0, 360));
     }
 
     function update() {
-        items.children.iterate((item) => {
-            if (item && item.y > 667) item.destroy();
+        if (!gameActive) return;
+
+        // 星空滚动
+        stars.children.iterate(star => {
+            star.y += 2;
+            if (star.y > config.height) star.y = 0;
+        });
+
+        // 计分
+        score += 0.1;
+        scoreText.setText('SCORE: ' + Math.floor(score));
+
+        // 清理越界敌人
+        enemies.children.iterate(enemy => {
+            if (enemy && enemy.y > config.height + 50) enemy.destroy();
+        });
+    }
+
+    function gameOver() {
+        gameActive = false;
+        this.physics.pause();
+        player.setAlpha(0);
+        
+        // 简单的粒子爆炸效果
+        for(let i=0; i<15; i++) {
+            let p = this.add.circle(player.x, player.y, 4, 0x00ffcc);
+            this.physics.add.existing(p);
+            p.body.setVelocity(Phaser.Math.Between(-200, 200), Phaser.Math.Between(-200, 200));
+        }
+
+        this.add.text(config.width/2 - 100, config.height/2, 'MISSION FAILED', { 
+            fontSize: '32px', fill: '#ff3366', fontStyle: 'bold' 
+        });
+        
+        this.time.delayedCall(2000, () => {
+            score = 0;
+            gameActive = true;
+            this.scene.restart();
         });
     }
 </script>
