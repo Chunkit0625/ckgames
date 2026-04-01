@@ -1,22 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <title>Chunk It Games</title>
+    
     <script src="https://sf16-muse-va.ibytedtos.com/obj/static-us-west/ttmg-jssdk/v1.0.0/ttmg.js"></script>
-    <style> body { margin: 0; background: #000; overflow: hidden; } </style>
+    
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+
+    <style>
+        body { margin: 0; background: #000; overflow: hidden; }
+        canvas { display: block; }
+    </style>
 </head>
 <body>
 <script>
-    // 2. 初始化 TikTok 小游戏环境
+    // 3. 必须的初始化逻辑
     if (typeof ttmg !== 'undefined') {
         ttmg.init({
-            success: () => { console.log("TikTok SDK initialized!"); },
-            fail: (err) => { console.log("SDK Init failed", err); }
+            success: (res) => { console.log('TikTok SDK initialized', res); },
+            fail: (err) => { console.error('TikTok SDK failed', err); }
         });
     }
 
+    // 游戏代码
     const config = {
         type: Phaser.AUTO,
         width: window.innerWidth,
@@ -25,16 +33,16 @@
         scene: { preload: preload, create: create, update: update }
     };
 
-    let player, enemies, stars, scoreText;
+    let player, enemies, scoreText;
     let score = 0;
     let gameActive = true;
 
     const game = new Phaser.Game(config);
 
-    function preload() {} // 纯代码生成素材，无需额外图片
+    function preload() {}
 
     function create() {
-        // 创建霓虹战机 (玩家)
+        // 创建玩家
         player = this.add.graphics();
         player.lineStyle(3, 0x00ffff, 1);
         player.strokeTriangle(0, 20, -15, -10, 15, -10);
@@ -46,55 +54,37 @@
         player.body.setCollideWorldBounds(true);
 
         enemies = this.physics.add.group();
-        stars = this.add.graphics();
-
-        // 刷新分数显示
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '24px', fill: '#0ff' });
 
-        // 定时生成敌机
         this.time.addEvent({
             delay: 1000,
-            callback: addEnemy,
+            callback: () => {
+                if (!gameActive) return;
+                const x = Phaser.Math.Between(50, window.innerWidth - 50);
+                const enemy = this.add.graphics();
+                enemy.lineStyle(2, 0xff00ff, 1);
+                enemy.strokeTriangle(0, -15, -10, 10, 10, 10);
+                const eContainer = this.add.container(x, -50);
+                eContainer.add(enemy);
+                this.physics.add.existing(eContainer);
+                enemies.add(eContainer);
+                eContainer.body.setVelocityY(200 + score * 5);
+            },
             callbackScope: this,
             loop: true
         });
 
-        // 碰撞检测
-        this.physics.add.overlap(player, enemies, gameOver, null, this);
+        this.physics.add.overlap(player, enemies, () => {
+            gameActive = false;
+            this.physics.pause();
+            this.add.text(window.innerWidth / 2 - 80, window.innerHeight / 2, 'GAME OVER', { fontSize: '32px', fill: '#f00' });
+        }, null, this);
 
-        // 手机触摸控制
-        this.input.on('pointermove', (pointer) => {
-            if (gameActive) {
-                player.x = pointer.x;
-            }
-        });
-    }
-
-    function addEnemy() {
-        if (!gameActive) return;
-        const x = Phaser.Math.Between(50, window.innerWidth - 50);
-        const enemy = this.add.graphics();
-        enemy.lineStyle(2, 0xff00ff, 1);
-        enemy.strokeTriangle(0, -15, -10, 10, 10, 10);
-        
-        const container = this.add.container(x, -50);
-        container.add(enemy);
-        this.physics.add.existing(container);
-        enemies.add(container);
-        container.body.setVelocityY(200 + score * 5);
+        this.input.on('pointermove', (p) => { if (gameActive) player.x = p.x; });
     }
 
     function update() {
         if (!gameActive) return;
-        
-        // 星空背景滚动感
-        stars.clear();
-        stars.fillStyle(0xffffff, 0.5);
-        for(let i=0; i<20; i++) {
-            stars.fillCircle(Phaser.Math.Between(0, window.innerWidth), Phaser.Math.Between(0, window.innerHeight), 1);
-        }
-
-        // 清理掉出屏幕的敌机
         enemies.children.iterate(child => {
             if (child && child.y > window.innerHeight + 50) {
                 child.destroy();
@@ -102,17 +92,6 @@
                 scoreText.setText('Score: ' + score);
             }
         });
-    }
-
-    function gameOver() {
-        gameActive = false;
-        this.physics.pause();
-        this.add.text(window.innerWidth / 2 - 80, window.innerHeight / 2, 'GAME OVER', { fontSize: '32px', fill: '#f00' });
-        
-        // 游戏结束给 TikTok 发送消息（可选）
-        if (typeof ttmg !== 'undefined') {
-            console.log("Game Over reported to TikTok");
-        }
     }
 </script>
 </body>
