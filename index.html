@@ -1,22 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chunk It Games</title>
-    
     <script src="https://sf16-muse-va.ibytedtos.com/obj/static-us-west/ttmg-jssdk/v1.0.0/ttmg.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-
-    <style>
-        body { margin: 0; background: #000; overflow: hidden; }
-        canvas { display: block; }
-    </style>
+    <style> body { margin: 0; background: #000; overflow: hidden; } </style>
 </head>
 <body>
 <script>
-    // 3. 必须的初始化逻辑
+    // 初始化 SDK
     if (typeof ttmg !== 'undefined') {
         ttmg.init({
             success: (res) => { console.log('TikTok SDK initialized', res); },
@@ -24,7 +17,6 @@
         });
     }
 
-    // 游戏代码
     const config = {
         type: Phaser.AUTO,
         width: window.innerWidth,
@@ -36,23 +28,19 @@
     let player, enemies, scoreText;
     let score = 0;
     let gameActive = true;
-
     const game = new Phaser.Game(config);
 
     function preload() {}
 
     function create() {
-        // 创建玩家
         player = this.add.graphics();
         player.lineStyle(3, 0x00ffff, 1);
         player.strokeTriangle(0, 20, -15, -10, 15, -10);
-        
         const container = this.add.container(window.innerWidth / 2, window.innerHeight - 100);
         container.add(player);
         this.physics.add.existing(container);
         player = container;
         player.body.setCollideWorldBounds(true);
-
         enemies = this.physics.add.group();
         scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '24px', fill: '#0ff' });
 
