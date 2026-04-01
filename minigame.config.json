@@ -1,6 +1,6 @@
 {
-  "orientation": "portrait",
-  "deviceOrientation": "portrait",
+  "orientation": "VERTICAL",
+  "deviceOrientation": "VERTICAL",
   "showStatusBar": false,
   "networkTimeout": {
     "request": 5000,
