@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+<body style="margin: 0; background: #000; overflow: hidden;">
+<script>
+    const config = {
+        type: Phaser.AUTO,
+        width: 375,
+        height: 667,
+        physics: { default: 'arcade' },
+        scene: { preload: preload, create: create, update: update }
+    };
+
+    let player;
+    let items;
+    let score = 0;
+    let scoreText;
+
+    new Phaser.Game(config);
+
+    function preload() {}
+
+    function create() {
+        // 玩家（底部的篮子/方块）
+        player = this.add.rectangle(187, 600, 80, 20, 0x00ff00);
+        this.physics.add.existing(player);
+        player.body.setCollideWorldBounds(true);
+
+        items = this.physics.add.group();
+
+        // 计分
+        scoreText = this.add.text(16, 16, 'Gold: 0', { fontSize: '24px', fill: '#fff' });
+
+        // 鼠标/手指移动
+        this.input.on('pointermove', (pointer) => {
+            player.x = pointer.x;
+        });
+
+        // 每秒掉落一个金币
+        this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                let x = Phaser.Math.Between(20, 355);
+                let item = this.add.circle(x, 0, 15, 0xffd700);
+                items.add(item);
+                this.physics.add.existing(item);
+                item.body.setVelocityY(250);
+            },
+            loop: true
+        });
+
+        // 碰撞检测
+        this.physics.add.overlap(player, items, (p, item) => {
+            item.destroy();
+            score += 10;
+            scoreText.setText('Gold: ' + score);
+        });
+    }
+
+    function update() {
+        items.children.iterate((item) => {
+            if (item && item.y > 667) item.destroy();
+        });
+    }
+</script>
+</body>
+</html>
