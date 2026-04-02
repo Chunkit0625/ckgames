@@ -1,5 +1,4 @@
 {
-  "orientation": "VERTICAL",
   "deviceOrientation": "VERTICAL",
   "showStatusBar": false,
   "networkTimeout": {
